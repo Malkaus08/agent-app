@@ -1,0 +1,116 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" type="text/css" href="{% static "admin/css/changelists.css" %}">
+  {% if cl.formset %}
+    <link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}">
+  {% endif %}
+  {% if cl.formset or action_form %}
+    <script src="{% url 'admin:jsi18n' %}"></script>
+  {% endif %}
+  {{ media.css }}
+  {% if not actions_on_top and not actions_on_bottom %}
+    <style>
+      #changelist table thead th:first-child {width: inherit}
+    </style>
+  {% endif %}
+    <!-- CSS only -->
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ media.js }}
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+{% endblock %}
+
+{% block bodyclass %}{{ block.super }} app-{{ opts.app_label }} model-{{ opts.model_name }} change-list{% endblock %}
+
+{% if not is_popup %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a>Policy Reports</a>
+</div>
+{% endblock %}
+{% endif %}
+
+{% block coltype %}{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    <form>
+        <div class="row">
+            <div class="col-2">
+                <select id="region" class="form-select" aria-label="Default select example">
+                    <option selected value="0">All</option>
+                    <option value="North">North</option>
+                    <option value="South">South</option>
+                    <option value="East">East</option>
+                    <option value="West">West</option>
+                </select>
+            </div>
+        </div>
+    </form>
+
+    <div class="row">
+        <div class="col-12" style="width: 75%;" id="graph-container">
+            <canvas id="month-chart"></canvas>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+  <script>
+      
+      jQuery(document).ready(function(){
+          get_chart_data();
+            jQuery(document).on('change', '#region', function() {
+                get_chart_data();
+            });
+        });
+
+        function get_chart_data() {
+                let $monthChart = $("#month-chart");
+                let region = $('#region').find(":selected").val();
+                let url = '/policy-report-data/';
+                url = url + '?region=' + region;
+                let ctx = $monthChart[0].getContext("2d");
+                $.ajax({
+                    url: url,
+                    dataType: 'json',
+                    type: "GET",
+                    cache: false,
+                    success: function(data) {
+                        $('#month-chart').remove(); // this is my <canvas> element
+                        $('#graph-container').append('<canvas id="month-chart"><canvas>');
+                        canvas = document.querySelector('#month-chart');
+                        var ctx = canvas.getContext("2d");
+
+                        new Chart(ctx, {
+                                type: 'bar',
+                                data: {
+                                labels: data.labels,
+                                datasets: [{
+                                    label: 'Number of Policy',
+                                    backgroundColor: 'blue',
+                                    data: data.data
+                                }]          
+                            },
+                            options: {
+                                responsive: true,
+                                legend: {
+                                    position: 'top',
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Population Bar Chart'
+                                }
+                            }
+                        });
+
+                    },
+                });
+            }
+  </script>
+  
+{% endblock %}
